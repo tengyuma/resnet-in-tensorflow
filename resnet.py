@@ -160,7 +160,7 @@ def residual_block(input_layer, output_channel, first_block=False):
 def dense_residual_blocks(input_layer, output_width):
     input_width = input_layer.get_shape().as_list()[1]
     matrix_A = create_variables('A', [input_width, output_width],is_fc_layer=True, initializer=tf.truncated_normal_initializer(stddev=0.1/output_width))
-    matrix_B = create_variables('B', [output_width,output_width], is_fc_layer=True)
+    matrix_B = create_variables('B', [output_width,output_width], is_fc_layer=True, initializer=tf.truncated_normal_initializer(stddev=0.1/output_width))
     bias = create_variables(name='bias', shape=[output_width], initializer= tf.zeros_initializer)
     middle_layer = tf.matmul(input_layer, matrix_A) + bias
     return tf.matmul(middle_layer, matrix_B) + input_layer
@@ -202,9 +202,10 @@ def dense_inference(input_tensor_batch, n, reuse):
             activation_summary(hidden)
             layers.append(hidden)
 
+    # TODO: more careful initializer
     with tf.variable_scope('change_dim_layer', reuse=reuse):
-        matrix_A = create_variables('A', [k, r],is_fc_layer=True)
-        matrix_B = create_variables('B', [r,r], is_fc_layer=True)
+        matrix_A = create_variables('A', [k, r],is_fc_layer=True, initializer=tf.truncated_normal_initializer(stddev=0.1/r))
+        matrix_B = create_variables('B', [r,r], is_fc_layer=True, initializer=tf.truncated_normal_initializer(stddev=0.1/r))
         bias = create_variables(name='bias', shape=[r], initializer= tf.zeros_initializer)
         middle_layer = tf.matmul(layers[-1], matrix_A) + bias
         output = tf.matmul(middle_layer, matrix_B)

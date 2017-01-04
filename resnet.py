@@ -29,6 +29,8 @@ def create_variables(name, shape, initializer=tf.contrib.layers.xavier_initializ
     layers.
     :return: The created variable
     '''
+
+
     if is_fc_layer is True:
         regularizer = tf.contrib.layers.l2_regularizer(scale=FLAGS.weight_decay)
     else:
@@ -153,6 +155,58 @@ def residual_block(input_layer, output_channel, first_block=False):
 
     output = conv2 + padded_input
     return output
+
+
+def dense_residual_blocks(input_layer, output_width):
+    input_width = input_layer.get_shape().as_list()[1]
+    matrix_A = create_variables('A', [input_width, output_width],is_fc_layer=True)
+    matrix_B = create_variables('B', [output_width,output_width], is_fc_layer=True)
+    bias = create_variables(name='bias', shape=[output_width])
+    middle_layer = tf.matmul(input_layer, matrix_A) + bias
+    return tf.matmul(middle_layer, matrix_B)
+
+
+
+
+
+def dense_inference(input_tensor_batch, n, reuse):
+    '''
+    vanilla resent without convolution
+    :param input_tensor_batch: 4D tensor
+    :param n: num_residual_blocks
+    :param reuse: To build train graph, reuse=False. To build validation graph and share weights
+    with train graph, resue=True
+    :return: last layer in the network. Not softmax-ed
+    '''
+
+    layers = []
+
+    input_shape = input_tensor_batch.get_shape().as_list()
+    input_reshaped = tf.reshape(input_tensor_batch, [input_shape[0], input_shape[1]*input_shape[2]*input_shape[3]])
+
+    #projection layer
+
+    #TODO: choose parameters
+    k= 100
+    r = 10
+
+    with tf.variable_scope('projection', reuse=reuse):
+        projection_matrix = create_variables('projection', [input_reshaped.get_shape().as_list()[1],k], is_fc_layer=True)
+        projection_layer = tf.matmul(input_reshaped, projection_matrix, name='projection_layer')
+        activation_summary(projection_layer)
+        layers.append(projection_layer)
+
+    for i in range(n):
+        with tf.variable_scope('layer_%d' %i, reuse=reuse):
+            hidden = dense_residual_blocks(layers[-1], k)
+            activation_summary(hidden)
+            layers.append(hidden)
+
+    with tf.variable_scope('change_dim_layer', reuse=reuse):
+        output = dense_residual_blocks(layers[-1], r)
+        layers.append(output)
+
+    return layers[-1]
 
 
 def inference(input_tensor_batch, n, reuse):

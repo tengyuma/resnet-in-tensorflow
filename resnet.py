@@ -163,7 +163,7 @@ def dense_residual_blocks(input_layer, output_width):
     matrix_B = create_variables('B', [output_width,output_width], is_fc_layer=True)
     bias = create_variables(name='bias', shape=[output_width], initializer= tf.zeros_initializer)
     middle_layer = tf.matmul(input_layer, matrix_A) + bias
-    return tf.matmul(middle_layer, matrix_B)
+    return tf.matmul(middle_layer, matrix_B) + input_layer
 
 
 
@@ -203,7 +203,11 @@ def dense_inference(input_tensor_batch, n, reuse):
             layers.append(hidden)
 
     with tf.variable_scope('change_dim_layer', reuse=reuse):
-        output = dense_residual_blocks(layers[-1], r)
+        matrix_A = create_variables('A', [k, r],is_fc_layer=True)
+        matrix_B = create_variables('B', [r,r], is_fc_layer=True)
+        bias = create_variables(name='bias', shape=[output_width], initializer= tf.zeros_initializer)
+        middle_layer = tf.matmul(layers[-1], matrix_A) + bias
+        output = tf.matmul(middle_layer, matrix_B)
         layers.append(output)
 
     return layers[-1]

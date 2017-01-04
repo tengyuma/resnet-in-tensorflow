@@ -88,6 +88,7 @@ class Train(object):
         # Build the graph for train and validation
         self.build_train_validation_graph()
 
+        print "build graphs succesfully"
         # Initialize a saver to save checkpoints. Merge all summaries, so we can run all
         # summarizing operations by running summary_op. Initialize a new session
         saver = tf.train.Saver(tf.all_variables())
@@ -102,6 +103,8 @@ class Train(object):
             print 'Restored from checkpoint...'
         else:
             sess.run(init)
+
+        print "initialized succesfully"
 
         # This summary writer object helps write summaries on tensorboard
         summary_writer = tf.train.SummaryWriter(train_dir, sess.graph)

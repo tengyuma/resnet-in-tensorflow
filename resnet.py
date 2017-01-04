@@ -159,7 +159,7 @@ def residual_block(input_layer, output_channel, first_block=False):
 
 def dense_residual_blocks(input_layer, output_width):
     input_width = input_layer.get_shape().as_list()[1]
-    matrix_A = create_variables('A', [input_width, output_width],is_fc_layer=True)
+    matrix_A = create_variables('A', [input_width, output_width],is_fc_layer=True, initializer=tf.truncated_normal_initializer(stddev=0.1/output_width))
     matrix_B = create_variables('B', [output_width,output_width], is_fc_layer=True)
     bias = create_variables(name='bias', shape=[output_width], initializer= tf.zeros_initializer)
     middle_layer = tf.matmul(input_layer, matrix_A) + bias

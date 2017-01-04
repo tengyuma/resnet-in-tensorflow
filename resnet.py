@@ -205,7 +205,7 @@ def dense_inference(input_tensor_batch, n, reuse):
     with tf.variable_scope('change_dim_layer', reuse=reuse):
         matrix_A = create_variables('A', [k, r],is_fc_layer=True)
         matrix_B = create_variables('B', [r,r], is_fc_layer=True)
-        bias = create_variables(name='bias', shape=[output_width], initializer= tf.zeros_initializer)
+        bias = create_variables(name='bias', shape=[r], initializer= tf.zeros_initializer)
         middle_layer = tf.matmul(layers[-1], matrix_A) + bias
         output = tf.matmul(middle_layer, matrix_B)
         layers.append(output)

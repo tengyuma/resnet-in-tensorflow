@@ -239,8 +239,8 @@ class Train(object):
                     sum = sum + train_error_value
                     print 'Train top1 error = ', train_error_value
                     print 'Train top1 loss = ', train_loss_value
-                    print "wrong guys", train_logits[in_top1,:]
-                    print "wrong guys", train_prediction[in_top1,:]
+                    print "wrong guys", train_logits[int(in_top1),:]
+                    print "wrong guys", train_prediction[int(in_top1),:]
 
                 print "initial_train_error_avg", 1.0*sum/N
 

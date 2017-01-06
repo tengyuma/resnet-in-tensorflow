@@ -243,8 +243,8 @@ class Train(object):
                     print train_logits.shape
                     print 'Train top1 error = ', train_error_value
                     print 'Train top1 loss = ', train_loss_value
-                    print "wrong guys", train_logits[np.where(in_top1),:]
-                    print "wrong guys", train_prediction[np.where(in_top1),:]
+                    print "wrong guys", train_logits[np.where(in_top1 == 0),:]
+                    print "wrong guys", train_prediction[np.where(in_top1 == 0),:]
 
                 print "initial_train_error_avg", 1.0*sum/N
 

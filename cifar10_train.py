@@ -128,7 +128,7 @@ class Train(object):
         Y = np.zeros([self.effective_training_data.shape[0],FLAGS.k])
         for i in range(self.effective_training_data.shape[0]):
             Y[i,:] = Q[self.all_labels[i],:]
-        rho = 0.8
+        rho = 0.6
         for i in range(FLAGS.ell):
             A_list.append(np.transpose(self.effective_training_data[i*FLAGS.k:(i+1)*FLAGS.k, :]))
             B_list.append((Y[i*FLAGS.k:(i+1)*FLAGS.k, :] - np.transpose(self.effective_training_data[i*FLAGS.k:(i+1)*FLAGS.k, :]))/(1-rho))
@@ -229,9 +229,7 @@ class Train(object):
 
                     in_top1_node = tf.to_float(tf.nn.in_top_k(self.train_prediction, self.label_placeholder, k=1))
 
-                    train_loss_value, train_error_value, train_logits,train_prediction, in_top1 = sess.run([self.full_loss, self.train_top1_error,
-                                                                                                   self.train_logits,self.train_prediction,
-                                                                                                   in_top1_node],
+                    train_loss_value, train_error_value = sess.run([self.full_loss, self.train_top1_error],
                                 {self.image_placeholder: train_batch_data,
                                   self.label_placeholder: train_batch_labels,
                                   self.vali_image_placeholder: validation_batch_data,

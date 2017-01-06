@@ -234,6 +234,9 @@ class Train(object):
                                   self.vali_image_placeholder: validation_batch_data,
                                   self.vali_label_placeholder: validation_batch_labels,
                                   self.lr_placeholder: FLAGS.init_lr})
+
+                    print train_logits[0:5,]
+                    print train_prediction[0:5,]
                     sum = sum + train_error_value
                     print 'Train top1 error = ', train_error_value
                     print 'Train top1 loss = ', train_loss_value

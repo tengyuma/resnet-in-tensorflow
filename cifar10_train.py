@@ -84,6 +84,7 @@ class Train(object):
         # Validation loss
         self.vali_loss = self.loss(vali_logits, self.vali_label_placeholder)
         vali_predictions = tf.nn.softmax(vali_logits)
+        self.vali_logits = vali_logits
         self.vali_top1_error = self.top_k_error(vali_predictions, self.vali_label_placeholder, 1)
 
         self.train_op, self.train_ema_op = self.train_operation(global_step, self.full_loss,
@@ -538,6 +539,8 @@ class Train(object):
                 self.vali_label_placeholder: vali_labels_subset[offset:offset+FLAGS.validation_batch_size],
                 self.lr_placeholder: FLAGS.init_lr}
             loss_value, top1_error_value = session.run([loss, top1_error], feed_dict=feed_dict)
+            logits = session.run([self.vali_logits], feed_dict=feed_dict)
+            print logits[0:5,:]
             loss_list.append(loss_value)
             error_list.append(top1_error_value)
 

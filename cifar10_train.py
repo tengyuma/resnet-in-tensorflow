@@ -539,9 +539,10 @@ class Train(object):
                 self.vali_label_placeholder: vali_labels_subset[offset:offset+FLAGS.validation_batch_size],
                 self.lr_placeholder: FLAGS.init_lr}
             loss_value, top1_error_value = session.run([loss, top1_error], feed_dict=feed_dict)
-            logits = session.run([self.vali_logits], feed_dict=feed_dict)
+            logits = session.run(self.vali_logits, feed_dict=feed_dict)
             print logits.shape
             print logits[0:5,:]
+            print logits
             loss_list.append(loss_value)
             error_list.append(top1_error_value)
 

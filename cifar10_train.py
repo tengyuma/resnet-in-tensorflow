@@ -227,19 +227,21 @@ class Train(object):
                     train_batch_data, train_batch_labels = self.generate_vanilla_train_batch(all_data, all_labels,
                                                                         FLAGS.train_batch_size)
 
-                    train_loss_value, train_error_value, train_logits,train_prediction = sess.run([self.full_loss, self.train_top1_error,
-                                                                                                   self.train_logits,self.train_prediction],
+                    train_loss_value, train_error_value, train_logits,train_prediction, in_top1 = sess.run([self.full_loss, self.train_top1_error,
+                                                                                                   self.train_logits,self.train_prediction,
+                                                                                                   self.in_top1],
                                 {self.image_placeholder: train_batch_data,
                                   self.label_placeholder: train_batch_labels,
                                   self.vali_image_placeholder: validation_batch_data,
                                   self.vali_label_placeholder: validation_batch_labels,
                                   self.lr_placeholder: FLAGS.init_lr})
 
-                    print train_logits[0:5,]
-                    print train_prediction[0:5,]
                     sum = sum + train_error_value
                     print 'Train top1 error = ', train_error_value
                     print 'Train top1 loss = ', train_loss_value
+                    print "wrong guys", train_logits[in_top1,:]
+                    print "wrong guys", train_prediction[in_top1,:]
+
                 print "initial_train_error_avg", 1.0*sum/N
 
             if step % FLAGS.report_freq == 0:
@@ -405,6 +407,7 @@ class Train(object):
         '''
         batch_size = predictions.get_shape().as_list()[0]
         in_top1 = tf.to_float(tf.nn.in_top_k(predictions, labels, k=1))
+        self.in_top1 = in_top1
         num_correct = tf.reduce_sum(in_top1)
         return (batch_size - num_correct) / float(batch_size)
 

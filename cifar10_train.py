@@ -10,6 +10,10 @@ import pandas as pd
 
 
 
+
+
+
+
 class Train(object):
     '''
     This Object is responsible for all the training and validation process
@@ -27,6 +31,7 @@ class Train(object):
         lr_placeholder is for learning rate. Feed in learning rate each time of training
         implements learning rate decay easily
         '''
+        '''
         self.image_placeholder = tf.placeholder(dtype=tf.float32,
                                                 shape=[FLAGS.train_batch_size, IMG_HEIGHT,
                                                         IMG_WIDTH, IMG_DEPTH])
@@ -34,6 +39,15 @@ class Train(object):
 
         self.vali_image_placeholder = tf.placeholder(dtype=tf.float32, shape=[FLAGS.validation_batch_size,
                                                                 IMG_HEIGHT, IMG_WIDTH, IMG_DEPTH])
+        self.vali_label_placeholder = tf.placeholder(dtype=tf.int32, shape=[FLAGS.validation_batch_size])
+        '''
+
+        self.image_placeholder = tf.placeholder(dtype=tf.float32,
+                                                shape=[FLAGS.train_batch_size, FLAGS.k])
+        self.label_placeholder = tf.placeholder(dtype=tf.int32, shape=[FLAGS.train_batch_size])
+
+        self.vali_image_placeholder = tf.placeholder(dtype=tf.float32, shape=[FLAGS.validation_batch_size,
+                                                                FLAGS.k])
         self.vali_label_placeholder = tf.placeholder(dtype=tf.int32, shape=[FLAGS.validation_batch_size])
 
         self.lr_placeholder = tf.placeholder(dtype=tf.float32, shape=[])
@@ -45,14 +59,17 @@ class Train(object):
         This function builds the train graph and validation graph at the same time.
         
         '''
-        global_step = tf.Variable(0, trainable=False)
-        validation_step = tf.Variable(0, trainable=False)
+        self.global_step = tf.Variable(0, trainable=False)
+        self.validation_step = tf.Variable(0, trainable=False)
+
+        global_step = self.global_step
+        validation_step = self.validation_step
 
         # Logits of training data and valiation data come from the same graph. The inference of
         # validation data share all the weights with train data. This is implemented by passing
         # reuse=True to the variable scopes of train graph
-        logits = dense_inference(self.image_placeholder, FLAGS.num_residual_blocks, reuse=False)
-        vali_logits = dense_inference(self.vali_image_placeholder, FLAGS.num_residual_blocks, reuse=True)
+        logits = dense_inference(self.image_placeholder, FLAGS.ell, reuse=False)
+        vali_logits = dense_inference(self.vali_image_placeholder, FLAGS.ell, reuse=True)
 
         # The following codes calculate the train loss, which is consist of the
         # softmax cross entropy and the relularization loss
@@ -73,7 +90,70 @@ class Train(object):
                                                                 self.train_top1_error)
         self.val_op = self.validation_op(validation_step, self.vali_top1_error, self.vali_loss)
 
+    def read_data(self):
+        self.all_data, self.all_labels = prepare_train_data(padding_size=FLAGS.padding_size)
+        self.vali_data, self.vali_labels = read_validation_data()
 
+        all_data_reshape = self.all_data.reshape(self.all_data.shape[0], self.all_data.shape[1]*self.all_data.shape[2]*self.all_data.shape[3])
+
+        vali_data_reshape = self.vali_data.reshape(self.vali_data.shape[0], self.all_data.shape[1]*self.all_data.shape[2]*self.all_data.shape[3])
+
+        #self.effective_training_data = all_data_reshape
+        self.effective_training_data = whitening_image(all_data_reshape)/np.sqrt(all_data_reshape.shape[1])
+        self.effective_vali_data = whitening_image(vali_data_reshape)/np.sqrt(vali_data_reshape.shape[1])
+        self.projection_init = np.random.normal(loc=0.0, scale = 1.0, size = [self.effective_training_data.shape[1], FLAGS.k])
+        self.effective_training_data = np.dot(self.effective_training_data, self.projection_init)
+        self.effective_vali_data = np.dot(self.effective_vali_data, self.projection_init)
+
+        self.effective_training_data = whitening_image(self.effective_training_data[0:FLAGS.k*FLAGS.ell,:])/np.sqrt(FLAGS.k)
+        self.effective_vali_data = whitening_image(self.effective_vali_data[0:FLAGS.k*FLAGS.ell,:])/np.sqrt(FLAGS.k)
+
+        #covariate = np.dot(self.effective_training_data[0:500,:],np.transpose(self.effective_training_data[0:500,:]))
+
+        #for i in range(covariate.shape[0]):
+            #covariate[i,i] = 0
+
+        #print np.max(np.abs(covariate))
+        #print np.mean(np.abs(covariate))
+
+
+    def prepare_init(self):
+        A_list = []
+        B_list = []
+        bias = []
+        Q= np.zeros([10, FLAGS.k])
+        Q[0:10,0:10] = np.eye(10)
+        Y = np.zeros([self.effective_training_data.shape[0],FLAGS.k])
+        for i in range(self.effective_training_data.shape[0]):
+            Y[i,:] = Q[self.all_labels[i],:]
+        rho = 0.95
+        for i in range(FLAGS.ell):
+            A_list.append(np.transpose(self.effective_training_data[i*FLAGS.k:(i+1)*FLAGS.k, :]))
+            B_list.append((Y[i*FLAGS.k:(i+1)*FLAGS.k, :] - np.transpose(self.effective_training_data[i*FLAGS.k:(i+1)*FLAGS.k, :]))/(1-rho))
+            bias.append(-rho*np.ones(shape=[FLAGS.k]))
+
+        self.A_init = A_list
+        self.B_init = B_list
+        self.bias_init = bias
+
+        init_ops = []
+        #with tf.variable_scope('projection', reuse=True):
+        #    proj = tf.get_variable('projection')
+        #init_ops += [tf.assign(proj, self.projection_init)]
+        for i in range(FLAGS.ell):
+            with tf.variable_scope('layer_%d'%i, reuse = True):
+                A = tf.get_variable('A')
+                B = tf.get_variable('B')
+                b = tf.get_variable('bias')
+
+            init_ops += [tf.assign(A, self.A_init[i])]
+            init_ops += [tf.assign(B, self.B_init[i])]
+            init_ops += [tf.assign(b, self.bias_init[i])]
+        with tf.variable_scope('final_layer', reuse=True):
+            final_layer = tf.get_variable('final_layer')
+        init_ops += [tf.assign(final_layer, np.transpose(Q).astype(np.float32))]
+
+        return init_ops
 
     def train(self):
         '''
@@ -82,8 +162,10 @@ class Train(object):
 
         # For the first step, we are loading all training images and validation images into the
         # memory
-        all_data, all_labels = prepare_train_data(padding_size=FLAGS.padding_size)
-        vali_data, vali_labels = read_validation_data()
+        all_data = self.effective_training_data
+        all_labels = self.all_labels
+        vali_data = self.effective_vali_data
+        vali_labels = self.vali_labels
 
         # Build the graph for train and validation
         self.build_train_validation_graph()
@@ -93,7 +175,10 @@ class Train(object):
         # summarizing operations by running summary_op. Initialize a new session
         saver = tf.train.Saver(tf.all_variables())
         summary_op = tf.merge_all_summaries()
-        init = tf.initialize_all_variables()
+        init_all = tf.initialize_all_variables()
+        init_weights = self.prepare_init()
+
+
         sess = tf.Session()
 
 
@@ -102,7 +187,9 @@ class Train(object):
             saver.restore(sess, FLAGS.ckpt_path)
             print 'Restored from checkpoint...'
         else:
-            sess.run(init)
+            sess.run(init_all)
+            sess.run(init_weights)
+
 
         print "initialized succesfully"
 
@@ -120,7 +207,7 @@ class Train(object):
 
         for step in xrange(FLAGS.train_steps):
 
-            train_batch_data, train_batch_labels = self.generate_augment_train_batch(all_data, all_labels,
+            train_batch_data, train_batch_labels = self.generate_vanilla_train_batch(all_data, all_labels,
                                                                         FLAGS.train_batch_size)
 
 
@@ -225,7 +312,7 @@ class Train(object):
                                                         IMG_HEIGHT, IMG_WIDTH, IMG_DEPTH])
 
         # Build the test graph
-        logits = dense_inference(self.test_image_placeholder, FLAGS.num_residual_blocks, reuse=False)
+        logits = dense_inference(self.test_image_placeholder, FLAGS.ell, reuse=False)
         predictions = tf.nn.softmax(logits)
 
         # Initialize a new session and restore a checkpoint
@@ -253,7 +340,7 @@ class Train(object):
             self.test_image_placeholder = tf.placeholder(dtype=tf.float32, shape=[remain_images,
                                                         IMG_HEIGHT, IMG_WIDTH, IMG_DEPTH])
             # Build the test graph
-            logits = dense_inference(self.test_image_placeholder, FLAGS.num_residual_blocks, reuse=True)
+            logits = dense_inference(self.test_image_placeholder, FLAGS.ell, reuse=True)
             predictions = tf.nn.softmax(logits)
 
             test_image_batch = test_image_array[-remain_images:, ...]
@@ -309,6 +396,23 @@ class Train(object):
         vali_label_batch = vali_label[offset:offset+vali_batch_size]
         return vali_data_batch, vali_label_batch
 
+    def generate_vanilla_train_batch(self, train_data, train_labels, train_batch_size):
+        '''
+        This function helps generate a batch of train data, and random crop, horizontally flip
+        and whiten them at the same time
+        :param train_data: 4D numpy array
+        :param train_labels: 1D numpy array
+        :param train_batch_size: int
+        :return: augmented train batch data and labels. 4D numpy array and 1D numpy array
+        '''
+        offset = np.random.choice(EPOCH_SIZE - train_batch_size, 1)[0]
+        batch_data = train_data[offset:offset+train_batch_size, ...]
+        #batch_data = random_crop_and_flip(batch_data, padding_size=FLAGS.padding_size)
+
+        #batch_data = whitening_image(batch_data)
+        batch_label = train_labels[offset:offset+FLAGS.train_batch_size]
+
+        return batch_data, batch_label
 
     def generate_augment_train_batch(self, train_data, train_labels, train_batch_size):
         '''
@@ -422,6 +526,10 @@ class Train(object):
 maybe_download_and_extract()
 # Initialize the Train object
 train = Train()
+
+train.read_data()
+
+#train.prepare_init()
 # Start the training session
 train.train()
 

@@ -162,7 +162,7 @@ def dense_residual_blocks(input_layer, output_width):
     matrix_A = create_variables('A', [input_width, output_width],is_fc_layer=True, initializer=tf.truncated_normal_initializer(stddev=0.1/output_width))
     matrix_B = create_variables('B', [output_width,output_width], is_fc_layer=True, initializer=tf.truncated_normal_initializer(stddev=0.1/output_width))
     bias = create_variables(name='bias', shape=[output_width], initializer= tf.zeros_initializer)
-    middle_layer = tf.matmul(input_layer, matrix_A) + bias
+    middle_layer = tf.nn.relu(tf.matmul(input_layer, matrix_A) + bias)
     return tf.matmul(middle_layer, matrix_B) + input_layer
 
 
@@ -181,27 +181,31 @@ def dense_inference(input_tensor_batch, n, reuse):
 
     layers = []
 
-    input_shape = input_tensor_batch.get_shape().as_list()
-    input_reshaped = tf.reshape(input_tensor_batch, [input_shape[0], input_shape[1]*input_shape[2]*input_shape[3]])
+    #input_shape = input_tensor_batch.get_shape().as_list()
+    #input_reshaped = tf.reshape(input_tensor_batch, [input_shape[0], input_shape[1]*input_shape[2]*input_shape[3]])
 
-    #projection layer
-
-    #TODO: choose parameters
-    k= 100
+    k= FLAGS.k
     r = 10
-
+    """
     with tf.variable_scope('projection', reuse=reuse):
         projection_matrix = create_variables('projection', [input_reshaped.get_shape().as_list()[1],k], is_fc_layer=True)
         projection_layer = tf.matmul(input_reshaped, projection_matrix, name='projection_layer')
         activation_summary(projection_layer)
         layers.append(projection_layer)
-
+    """
+    layers.append(input_tensor_batch)
     for i in range(n):
         with tf.variable_scope('layer_%d' %i, reuse=reuse):
             hidden = dense_residual_blocks(layers[-1], k)
             activation_summary(hidden)
             layers.append(hidden)
 
+
+    with tf.variable_scope('final_layer', reuse=reuse):
+        final_layer= create_variables('final_layer', [k, r], is_fc_layer=True, initializer=tf.truncated_normal_initializer(stddev=0.1/r))
+        output = tf.matmul(layers[-1], final_layer)
+        layers.append(output)
+    '''
     # TODO: more careful initializer
     with tf.variable_scope('change_dim_layer', reuse=reuse):
         matrix_A = create_variables('A', [k, r],is_fc_layer=True, initializer=tf.truncated_normal_initializer(stddev=0.1/r))
@@ -210,7 +214,7 @@ def dense_inference(input_tensor_batch, n, reuse):
         middle_layer = tf.matmul(layers[-1], matrix_A) + bias
         output = tf.matmul(middle_layer, matrix_B)
         layers.append(output)
-
+    '''
     return layers[-1]
 
 

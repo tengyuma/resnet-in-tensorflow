@@ -7,7 +7,7 @@ import sys
 import numpy as np
 import cPickle
 import os
-import cv2
+#import cv2
 
 data_dir = 'cifar10_data'
 full_data_dir = 'cifar10_data/cifar-10-batches-py/data_batch_'

@@ -227,9 +227,11 @@ class Train(object):
                     train_batch_data, train_batch_labels = self.generate_vanilla_train_batch(all_data, all_labels,
                                                                         FLAGS.train_batch_size)
 
+                    in_top1_node = tf.to_float(tf.nn.in_top_k(self.train_prediction, self.label_placeholder, k=1))
+
                     train_loss_value, train_error_value, train_logits,train_prediction, in_top1 = sess.run([self.full_loss, self.train_top1_error,
                                                                                                    self.train_logits,self.train_prediction,
-                                                                                                   self.in_top1],
+                                                                                                   in_top1_node],
                                 {self.image_placeholder: train_batch_data,
                                   self.label_placeholder: train_batch_labels,
                                   self.vali_image_placeholder: validation_batch_data,
@@ -238,6 +240,7 @@ class Train(object):
 
                     sum = sum + train_error_value
                     print in_top1.shape
+                    print train_logits.shape
                     print 'Train top1 error = ', train_error_value
                     print 'Train top1 loss = ', train_loss_value
                     print "wrong guys", train_logits[np.where(in_top1),:]
@@ -408,7 +411,6 @@ class Train(object):
         '''
         batch_size = predictions.get_shape().as_list()[0]
         in_top1 = tf.to_float(tf.nn.in_top_k(predictions, labels, k=1))
-        self.in_top1 = in_top1
         num_correct = tf.reduce_sum(in_top1)
         return (batch_size - num_correct) / float(batch_size)
 

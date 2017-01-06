@@ -128,7 +128,7 @@ class Train(object):
         Y = np.zeros([self.effective_training_data.shape[0],FLAGS.k])
         for i in range(self.effective_training_data.shape[0]):
             Y[i,:] = Q[self.all_labels[i],:]
-        rho = 0.99
+        rho = 0.8
         for i in range(FLAGS.ell):
             A_list.append(np.transpose(self.effective_training_data[i*FLAGS.k:(i+1)*FLAGS.k, :]))
             B_list.append((Y[i*FLAGS.k:(i+1)*FLAGS.k, :] - np.transpose(self.effective_training_data[i*FLAGS.k:(i+1)*FLAGS.k, :]))/(1-rho))
@@ -241,8 +241,8 @@ class Train(object):
                     sum = sum + train_error_value
                     print 'Train top1 error = ', train_error_value
                     print 'Train top1 loss = ', train_loss_value
-                    print "wrong guys", train_logits[np.where(in_top1 == 0),:]
-                    print "wrong guys", train_prediction[np.where(in_top1 == 0),:]
+                    #print "wrong guys", train_logits[np.where(in_top1 == 0),:]
+                    #print "wrong guys", train_prediction[np.where(in_top1 == 0),:]
 
                 print "initial_train_error_avg", 1.0*sum/N
 

@@ -222,7 +222,7 @@ class Train(object):
 
             if step == 0:
                 sum = 0
-                N= 200
+                N= 100
                 for i in range(N):
                     train_batch_data, train_batch_labels = self.generate_vanilla_train_batch(all_data, all_labels,
                                                                         FLAGS.train_batch_size)

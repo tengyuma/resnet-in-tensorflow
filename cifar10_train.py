@@ -222,8 +222,7 @@ class Train(object):
                     train_batch_data, train_batch_labels = self.generate_vanilla_train_batch(all_data, all_labels,
                                                                         FLAGS.train_batch_size)
 
-                    _, _, train_loss_value, train_error_value = sess.run([self.train_op, self.train_ema_op,
-                                                           self.full_loss, self.train_top1_error],
+                    train_loss_value, train_error_value = sess.run([self.full_loss, self.train_top1_error],
                                 {self.image_placeholder: train_batch_data,
                                   self.label_placeholder: train_batch_labels,
                                   self.vali_image_placeholder: validation_batch_data,

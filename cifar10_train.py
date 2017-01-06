@@ -216,9 +216,12 @@ class Train(object):
 
             # Want to validate once before training. You may check the theoretical validation
             # loss first
-            if step % FLAGS.report_freq == 0:
 
-                for i in range(1000):
+
+            if step == 0:
+                sum = 0
+                N= 200
+                for i in range(N):
                     train_batch_data, train_batch_labels = self.generate_vanilla_train_batch(all_data, all_labels,
                                                                         FLAGS.train_batch_size)
 
@@ -228,9 +231,11 @@ class Train(object):
                                   self.vali_image_placeholder: validation_batch_data,
                                   self.vali_label_placeholder: validation_batch_labels,
                                   self.lr_placeholder: FLAGS.init_lr})
-
+                    sum = sum + train_loss_value
                     print 'Train top1 error = ', train_error_value
+                print "initial_train_error_avg", 1.0*sum/N
 
+            if step % FLAGS.report_freq == 0:
 
                 if FLAGS.is_full_validation is True:
                     validation_loss_value, validation_error_value = self.full_validation(loss=self.vali_loss,

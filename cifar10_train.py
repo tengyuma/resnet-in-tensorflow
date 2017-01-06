@@ -254,6 +254,9 @@ class Train(object):
                                             vali_labels=vali_labels, session=sess,
                                             batch_data=train_batch_data, batch_label=train_batch_labels)
 
+                    print "validation_error=", validation_error_value
+                    print "validation_loss=", validation_loss_value
+
                     vali_summ = tf.Summary()
                     vali_summ.value.add(tag='full_validation_error',
                                         simple_value=validation_error_value.astype(np.float))

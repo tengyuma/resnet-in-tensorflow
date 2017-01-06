@@ -218,6 +218,21 @@ class Train(object):
             # loss first
             if step % FLAGS.report_freq == 0:
 
+                for i in range(1000):
+                    train_batch_data, train_batch_labels = self.generate_vanilla_train_batch(all_data, all_labels,
+                                                                        FLAGS.train_batch_size)
+
+                    _, _, train_loss_value, train_error_value = sess.run([self.train_op, self.train_ema_op,
+                                                           self.full_loss, self.train_top1_error],
+                                {self.image_placeholder: train_batch_data,
+                                  self.label_placeholder: train_batch_labels,
+                                  self.vali_image_placeholder: validation_batch_data,
+                                  self.vali_label_placeholder: validation_batch_labels,
+                                  self.lr_placeholder: FLAGS.init_lr})
+
+                    print 'Train top1 error = ', train_error_value
+
+
                 if FLAGS.is_full_validation is True:
                     validation_loss_value, validation_error_value = self.full_validation(loss=self.vali_loss,
                                             top1_error=self.vali_top1_error, vali_data=vali_data,
@@ -241,6 +256,7 @@ class Train(object):
                                                  self.lr_placeholder: FLAGS.init_lr})
 
                 val_error_list.append(validation_error_value)
+
 
 
             start_time = time.time()

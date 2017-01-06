@@ -76,8 +76,9 @@ class Train(object):
         regu_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
         loss = self.loss(logits, self.label_placeholder)
         self.full_loss = tf.add_n([loss] + regu_losses)
-
+        self.train_logits = logits
         predictions = tf.nn.softmax(logits)
+        self.train_prediction = predictions
         self.train_top1_error = self.top_k_error(predictions, self.label_placeholder, 1)
 
 
@@ -226,7 +227,8 @@ class Train(object):
                     train_batch_data, train_batch_labels = self.generate_vanilla_train_batch(all_data, all_labels,
                                                                         FLAGS.train_batch_size)
 
-                    train_loss_value, train_error_value = sess.run([self.full_loss, self.train_top1_error],
+                    train_loss_value, train_error_value, train_logits,train_prediction = sess.run([self.full_loss, self.train_top1_error,
+                                                                                                   self.train_logits,self.train_prediction],
                                 {self.image_placeholder: train_batch_data,
                                   self.label_placeholder: train_batch_labels,
                                   self.vali_image_placeholder: validation_batch_data,
@@ -540,9 +542,7 @@ class Train(object):
                 self.lr_placeholder: FLAGS.init_lr}
             loss_value, top1_error_value = session.run([loss, top1_error], feed_dict=feed_dict)
             logits = session.run(self.vali_logits, feed_dict=feed_dict)
-            print logits.shape
             print logits[0:5,:]
-            print logits
             loss_list.append(loss_value)
             error_list.append(top1_error_value)
 

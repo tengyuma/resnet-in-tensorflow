@@ -231,8 +231,9 @@ class Train(object):
                                   self.vali_image_placeholder: validation_batch_data,
                                   self.vali_label_placeholder: validation_batch_labels,
                                   self.lr_placeholder: FLAGS.init_lr})
-                    sum = sum + train_loss_value
+                    sum = sum + train_error_value
                     print 'Train top1 error = ', train_error_value
+                    print 'Train top1 loss = ', train_loss_value
                 print "initial_train_error_avg", 1.0*sum/N
 
             if step % FLAGS.report_freq == 0:
